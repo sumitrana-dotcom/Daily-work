@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Daily Emailer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d1a;
+    color: #e0e0f0;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 0.85rem; margin-bottom: 24px; }
+
+  .card {
+    background: #161626;
+    border: 1px solid #2a2a44;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #666;
+    margin-bottom: 14px;
+  }
+
+  /* --- Member Table --- */
+  .member-row {
+    display: grid;
+    grid-template-columns: 12px 160px 1fr 90px 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #1e1e32;
+    font-size: 0.88rem;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .bar-track { background: #1e1e32; border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-align: center;
+  }
+  .badge.great { background: #0d2e1a; color: #22c55e; }
+  .badge.warn  { background: #2e1a0d; color: #f97316; }
+
+  /* --- Email Preview --- */
+  #email-preview {
+    background: #12121f;
+    border: 1px solid #2a2a44;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .email-header {
+    background: linear-gradient(135deg, #1a1a30 0%, #0f0f22 100%);
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid #2a2a44;
+  }
+  .email-date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #ff3860;
+    color: #fff;
+    border-radius: 10px;
+    padding: 4px 14px 4px 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .email-date-badge .num {
+    background: rgba(0,0,0,0.25);
+    border-radius: 7px;
+    padding: 2px 8px;
+    font-size: 1.1rem;
+  }
+  .email-title { font-size: 1.2rem; font-weight: 700; color: #fff; }
+  .email-meta  { font-size: 0.78rem; color: #aaa; margin-top: 4px; }
+  .email-body  { padding: 22px 28px; }
+  .email-body p { font-size: 0.88rem; line-height: 1.7; color: #ccc; margin-bottom: 14px; }
+
+  .email-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #555;
+    margin: 18px 0 10px;
+  }
+  .email-member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: #1a1a2e;
+  }
+  .email-member .dot { flex-shrink: 0; }
+  .email-member .name { font-weight: 600; font-size: 0.88rem; flex: 1; }
+  .email-member .stats { font-size: 0.78rem; color: #888; }
+  .email-member .status-icon { font-size: 1rem; }
+
+  .email-footer {
+    padding: 16px 28px;
+    border-top: 1px solid #1e1e32;
+    font-size: 0.75rem;
+    color: #555;
+  }
+
+  /* --- Controls --- */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary   { background: #6c63ff; color: #fff; }
+  .btn-secondary { background: #1e1e32; color: #ccc; border: 1px solid #2a2a44; }
+  .btn-success   { background: #22c55e; color: #000; }
+
+  .schedule-info {
+    background: #1a1a2e;
+    border: 1px solid #2a2a44;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: #aaa;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .schedule-info .clock { font-size: 1.1rem; }
+
+  /* Status */
+  #status-msg {
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  #status-msg.show { display: block; }
+  #status-msg.info { background: #0d2040; color: #60aaff; border: 1px solid #1a4080; }
+  #status-msg.success { background: #0d2e1a; color: #22c55e; border: 1px solid #1a5030; }
+  #status-msg.error { background: #2e0d1a; color: #f97316; border: 1px solid #5a1a30; }
+
+  /* Editable fields */
+  .field-group { margin-bottom: 14px; }
+  .field-group label { display: block; font-size: 0.78rem; color: #888; margin-bottom: 5px; }
+  .field-group input, .field-group textarea {
+    width: 100%;
+    background: #1e1e32;
+    border: 1px solid #2a2a44;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #e0e0f0;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .field-group textarea { min-height: 80px; resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .target-badge {
+    display: inline-block;
+    background: #1e1e32;
+    border: 1px solid #3a3a54;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    color: #aaa;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>📧 Team Daily Emailer</h1>
+<p class="subtitle">Auto-sends at 4:00 AM daily (except Sunday) · Target: 480 min factored work</p>
+
+<div id="status-msg"></div>
+
+<!-- SCHEDULE INFO -->
+<div class="schedule-info">
+  <span class="clock">⏰</span>
+  <span id="schedule-display">Next send: calculating...</span>
+</div>
+
+<!-- TEAM DATA -->
+<div class="card">
+  <div class="card-title">Team Performance · 24 Jun 2026 <span class="target-badge">Target ≥ 480 min</span></div>
+  <div id="member-table"></div>
+</div>
+
+<!-- CONFIG -->
+<div class="card">
+  <div class="card-title">Email Configuration</div>
+  <div class="row2">
+    <div class="field-group">
+      <label>From Name</label>
+      <input type="text" id="from-name" value="Team Lead" />
+    </div>
+    <div class="field-group">
+      <label>Reply-To Email</label>
+      <input type="text" id="reply-email" value="teamlead@company.com" />
+    </div>
+  </div>
+  <div class="field-group">
+    <label>Team Email List (comma separated)</label>
+    <input type="text" id="to-emails" value="dhruv@co.com, karmendra@co.com, khushi@co.com, shweta@co.com, vijay@co.com, tannu@co.com, sumit@co.com" />
+  </div>
+  <div class="field-group">
+    <label>Subject Line</label>
+    <input type="text" id="email-subject" value="📊 Daily Team Performance Report – {DATE}" />
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="btn btn-primary" onclick="generatePreview()">🔄 Regenerate Email Preview</button>
+  <button class="btn btn-success" onclick="sendTestEmail()">📤 Send Now (Test)</button>
+  <button class="btn btn-secondary" onclick="copyEmailHtml()">📋 Copy Email HTML</button>
+</div>
+
+<!-- EMAIL PREVIEW -->
+<div class="card-title" style="margin-bottom:10px">📬 Email Preview</div>
+<div id="email-preview"></div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────
+const COLORS = {
+  'Dhruv Kumar':    '#ff3860',
+  'Karmendra Singh':'#aaff00',
+  'Khushi':         '#00cfff',
+  'Shweta Gupta':   '#ff00cc',
+  'Vijay':          '#ff8800',
+  'Tannu Kumari':   '#ff4466',
+  'Sumit Rana':     '#ffcc00',
+};
+
+const teamData = [
+  { name: 'Dhruv Kumar',    mins: 920, hours: '15.3h', vins: 345,   tasks: 1 },
+  { name: 'Karmendra Singh',mins: 692, hours: '11.5h', vins: 1145,  tasks: 3 },
+  { name: 'Khushi',         mins: 481, hours: '8.0h',  vins: 6932,  tasks: 5 },
+  { name: 'Shweta Gupta',   mins: 415, hours: '6.9h',  vins: 9279,  tasks: 5 },
+  { name: 'Vijay',          mins: 276, hours: '4.6h',  vins: 6814,  tasks: 7 },
+  { name: 'Tannu Kumari',   mins: 143, hours: '2.4h',  vins: 2125,  tasks: 6 },
+  { name: 'Sumit Rana',     mins: 2,   hours: '0.0h',  vins: 65,    tasks: 1 },
+];
+
+const TARGET = 480;
+const WARN_BELOW = 450;
+const maxMins = Math.max(...teamData.map(m => m.mins));
+
+// ── Table ─────────────────────────────────────────────────────────────────
+function renderTable() {
+  const el = document.getElementById('member-table');
+  el.innerHTML = teamData.map(m => {
+    const pct = Math.round((m.mins / maxMins) * 100);
+    const color = COLORS[m.name];
+    const label = m.mins >= TARGET ? '✅ Great' : m.mins < WARN_BELOW ? '⚠️ Below' : '⚡ Near';
+    const badgeCls = m.mins >= TARGET ? 'great' : 'warn';
+    return `
+      <div class="member-row">
+        <div class="dot" style="background:${color}"></div>
+        <div>${m.name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div style="font-size:0.8rem;color:#aaa">${m.mins}m · ${m.hours}</div>
+        <div class="badge ${badgeCls}">${label}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Schedule Display ──────────────────────────────────────────────────────
+function getNextSend() {
+  const now = new Date();
+  let next = new Date(now);
+  next.setHours(4, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  // Skip Sunday (0)
+  while (next.getDay() === 0) next.setDate(next.getDate() + 1);
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `Next send: ${days[next.getDay()]}, ${next.getDate()} ${months[next.getMonth()]} at 4:00 AM`;
+}
+
+function updateSchedule() {
+  document.getElementById('schedule-display').textContent = getNextSend();
+}
+
+// ── Email Generation ──────────────────────────────────────────────────────
+function formatDate() {
+  const now = new Date();
+  const d = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function generateEmailHTML() {
+  const date = formatDate();
+  const day = new Date().getDate();
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date().getMonth()];
+
+  const achievers = teamData.filter(m => m.mins >= TARGET);
+  const warning   = teamData.filter(m => m.mins < WARN_BELOW);
+  const near      = teamData.filter(m => m.mins >= WARN_BELOW && m.mins < TARGET);
+
+  const memberRow = (m, icon) => {
+    const color = COLORS[m.name];
+    return `
+      <div class="email-member">
+        <div class="dot" style="background:${color};width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+        <div class="name">${m.name}</div>
+        <div class="stats">${m.mins}m · ${m.hours} · ${m.vins.toLocaleString()} VINs · ${m.tasks} tasks</div>
+        <div class="status-icon">${icon}</div>
+      </div>`;
+  };
+
+  const teamTotal = teamData.reduce((s, m) => s + m.mins, 0);
+  const avgMins   = Math.round(teamTotal / teamData.length);
+
+  return `
+  <div class="email-header">
+    <div class="email-date-badge">
+      <span class="num">${day}</span>${mon}
+    </div>
+    <div class="email-title">📊 Daily Team Performance</div>
+    <div class="email-meta">${date} · ${teamData.length} team members · Target: ${TARGET} min factored work</div>
+  </div>
+  <div class="email-body">
+    <p>Hi Team 👋,</p>
+    <p>Here's your daily performance summary for <strong>${date}</strong>. The team target is <strong>${TARGET} factored minutes</strong> of work. Great going to those who hit it — and a gentle nudge to those still building momentum!</p>
+
+    ${achievers.length ? `<div class="email-section-title">🏆 Achieved Target (≥ ${TARGET} min)</div>
+    ${achievers.map(m => memberRow(m, '✅')).join('')}` : ''}
+
+    ${near.length ? `<div class="email-section-title">⚡ Close to Target (${WARN_BELOW}–${TARGET - 1} min)</div>
+    ${near.map(m => memberRow(m, '⚡')).join('')}` : ''}
+
+    ${warning.length ? `<div class="email-section-title">⚠️ Needs Attention (< ${WARN_BELOW} min)</div>
+    ${warning.map(m => memberRow(m, '⚠️')).join('')}` : ''}
+
+    <div style="margin-top:20px;padding:14px 18px;background:#1a1a2e;border-radius:10px;border:1px solid #2a2a44">
+      <div style="font-size:0.78rem;color:#666;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">Team Summary</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><div style="font-size:1.2rem;font-weight:700;color:#fff">${teamTotal.toLocaleString()}m</div><div style="font-size:0.75rem;color:#888">Total Minutes</div></div>
+        <div><div style="font-size:1.2rem;font-weight:700;color:#fff">${avgMins}m</div><div style="font-size:0.75rem;color:#888">Team Avg</div></div>
+        <div><div style="font-size:1.2rem;font-weight:700;color:#22c55e">${achievers.length}</div><div style="font-size:0.75rem;color:#888">Hit Target</div></div>
+        <div><div style="font-size:1.2rem;font-weight:700;color:#f97316">${warning.length}</div><div style="font-size:0.75rem;color:#888">Need Push</div></div>
+      </div>
+    </div>
+
+    <p style="margin-top:16px;font-size:0.82rem;color:#888">Keep pushing — every minute counts. 💪<br>This is an automated report sent daily at 4:00 AM (Mon–Sat).</p>
+  </div>
+  <div class="email-footer">
+    Sent by Team Daily Emailer · Auto-generated · ${date}
+  </div>`;
+}
+
+function generatePreview() {
+  document.getElementById('email-preview').innerHTML = generateEmailHTML();
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function sendTestEmail() {
+  // In production, this would POST to your backend / email API
+  const to = document.getElementById('to-emails').value;
+  showStatus(`✅ Test email queued for: ${to.split(',').length} recipients (integrate with your SMTP/SendGrid API)`, 'success');
+}
+
+function copyEmailHtml() {
+  const html = document.getElementById('email-preview').innerHTML;
+  navigator.clipboard.writeText(html).then(() => {
+    showStatus('📋 Email HTML copied to clipboard!', 'info');
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+renderTable();
+generatePreview();
+updateSchedule();
+setInterval(updateSchedule, 60000);
+
+// Auto-schedule check (runs every minute, fires email at 4am Mon-Sat)
+let lastSentDate = null;
+setInterval(() => {
+  const now = new Date();
+  const dateKey = now.toDateString();
+  if (now.getHours() === 4 && now.getMinutes() === 0 && now.getDay() !== 0 && lastSentDate !== dateKey) {
+    lastSentDate = dateKey;
+    sendTestEmail();
+    showStatus('⏰ Scheduled 4AM email sent!', 'success');
+  }
+}, 60000);
+</script>
+</body>
+</html>
